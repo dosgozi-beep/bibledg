@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>バイブルドッヂ - ダビデ vs ゴリアテ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; background: #1a0f08; min-height: 100vh; overflow-x: hidden; color: #f4e4c1; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; background: #1a0f08; }
+
+  .sound-toggle {
+    position: absolute; top: 10px; right: 10px; z-index: 100;
+    background: rgba(26,15,8,0.85); border: 2px solid #8b6a2a; color: #8b6a2a;
+    width: 44px; height: 44px; border-radius: 50%; font-size: 1.2rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px); transition: transform 0.15s, border-color 0.2s;
+  }
+  .sound-toggle:active { transform: scale(0.9); }
+  .sound-toggle.on { border-color: #f4c95d; color: #f4c95d; animation: soundPulse 1.5s ease-in-out infinite; }
+  .sound-toggle.loading { opacity: 0.5; cursor: wait; }
+  @keyframes soundPulse { 0%,100% { box-shadow: 0 0 10px rgba(244,201,93,0.4); } 50% { box-shadow: 0 0 24px rgba(244,201,93,0.95); } }
+  .music-hint { position: absolute; top: 56px; right: 10px; z-index: 99; background: rgba(26,15,8,0.9); border: 1px solid #f4c95d; color: #f4c95d; padding: 6px 12px; border-radius: 6px; font-size: 0.72rem; max-width: 200px; animation: hintPulse 2s ease-in-out infinite; pointer-events: none; }
+  @keyframes hintPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+  .title-screen {
+    text-align: center; padding: 30px 20px; min-height: 100vh;
+    background: linear-gradient(180deg, rgba(26,15,8,0.6) 0%, rgba(26,15,8,0.88) 55%, rgba(26,15,8,0.98) 100%),
+      url("./background.jpg") center/cover;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+
+  .game-logo { position: relative; padding: 20px 10px 30px; margin-bottom: 8px; max-width: 420px; }
+  .game-logo::before, .game-logo::after { content: ""; position: absolute; left: 10%; right: 10%; height: 2px; background: linear-gradient(90deg, transparent, #f4c95d 20%, #fff6d5 50%, #f4c95d 80%, transparent); box-shadow: 0 0 10px rgba(244,201,93,0.6); }
+  .game-logo::before { top: 6px; } .game-logo::after { bottom: 10px; }
+  .logo-crosses { display: flex; justify-content: center; gap: 40px; font-size: 1rem; color: #f4c95d; margin-bottom: 4px; text-shadow: 0 0 10px rgba(244,201,93,0.7); }
+  .logo-main {
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-size: 3.6rem; font-weight: 900; letter-spacing: 0.06em; line-height: 0.92; margin: 6px 0;
+    background: linear-gradient(180deg, #fff9e0 0%, #ffe066 18%, #f4c95d 35%, #d4a04e 55%, #8b6a2a 75%, #d4a04e 88%, #fff9e0 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    -webkit-text-stroke: 1.5px #2a1810;
+    filter: drop-shadow(2px 2px 0 #2a1810) drop-shadow(3px 4px 0 #1a0f08) drop-shadow(0 6px 4px rgba(0,0,0,0.7)) drop-shadow(0 0 30px rgba(244,201,93,0.35));
+    position: relative; animation: logoFloat 4s ease-in-out infinite;
+  }
+  @keyframes logoFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  .logo-shine-wrap { position: relative; display: inline-block; overflow: hidden; padding: 4px 12px; }
+  .logo-shine-wrap::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.55) 50%, transparent 80%); mix-blend-mode: overlay; pointer-events: none; animation: shineSweep 4.5s ease-in-out infinite; }
+  @keyframes shineSweep { 0% { left: -50%; } 50%,100% { left: 110%; } }
+  .logo-sub { color: #d4a04e; font-family: 'Georgia', serif; font-size: 0.88rem; letter-spacing: 0.55em; margin-top: 10px; padding-left: 0.5em; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+  .vs-label { font-size: 1rem; color: #e8c896; letter-spacing: 0.25em; margin: 16px 0 0; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-family: 'Georgia', serif; }
+  .vs-label b { color: #f4c95d; font-weight: 600; letter-spacing: 0.15em; font-family: 'Hiragino Mincho ProN', serif; }
+  .vs-label .vs { color: #c53030; font-weight: bold; margin: 0 8px; font-style: italic; font-size: 1.1rem; }
+
+  .rules { background: rgba(26,15,8,0.85); border: 1px solid #8b6a2a; border-radius: 10px; padding: 14px 18px; margin: 18px 0 20px; text-align: left; font-size: 0.83rem; line-height: 1.7; color: #f4e4c1; backdrop-filter: blur(4px); max-width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  .rules h3 { text-align: center; margin-bottom: 6px; color: #f4c95d; font-size: 0.9rem; letter-spacing: 0.15em; font-weight: 500; }
+  .rules .crit { color: #fbbf24; font-weight: bold; }
+  button.main-btn { background: linear-gradient(180deg, #d4a04e 0%, #8b6a2a 100%); color: #1a0f08; font-family: inherit; font-size: 1.1rem; padding: 13px 40px; border: 2px solid #f4c95d; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 0 #3a2410, 0 8px 24px rgba(244,201,93,0.3); font-weight: bold; letter-spacing: 0.2em; transition: transform 0.1s; }
+  button.main-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #3a2410; }
+
+  .battle-screen { display: flex; flex-direction: column; min-height: 100vh; }
+  .hp-bars { display: flex; justify-content: space-between; gap: 16px; padding: 12px 60px 12px 14px; background: linear-gradient(180deg, #2a1810 0%, #1a0f08 100%); border-bottom: 2px solid #8b6a2a; position: relative; z-index: 5; }
+  .hp-bar-wrap { flex: 1; min-width: 0; }
+  .hp-label { font-size: 0.85rem; font-weight: bold; margin-bottom: 3px; color: #f4c95d; letter-spacing: 0.08em; }
+  .hp-bar-outer { background: #1a0f08; border-radius: 8px; height: 14px; overflow: hidden; border: 2px solid #8b6a2a; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+  .hp-bar-inner { background: linear-gradient(90deg, #4ade80, #22c55e); height: 100%; transition: width 0.5s ease; }
+  .hp-bar-inner.low { background: linear-gradient(90deg, #fb923c, #f97316); }
+  .hp-bar-inner.critical { background: linear-gradient(90deg, #ef4444, #dc2626); animation: blink 0.5s infinite; }
+  @keyframes blink { 50% { opacity: 0.5; } }
+  .hp-text { font-size: 0.72rem; text-align: right; margin-top: 2px; color: #e8c896; }
+
+  .arena { flex: 1; position: relative; min-height: 360px; background: linear-gradient(180deg, rgba(26,15,8,0) 0%, rgba(26,15,8,0.15) 40%, rgba(26,15,8,0.5) 90%), url("./background.jpg") center/cover; overflow: hidden; }
+  .arena::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center top, rgba(244,201,93,0.12) 0%, transparent 50%); pointer-events: none; }
+  .arena::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 80px; background: linear-gradient(180deg, transparent 0%, rgba(139,106,42,0.15) 40%, rgba(26,15,8,0.35) 100%); pointer-events: none; z-index: 2; }
+
+  .arena.shaking { animation: screenShake 0.5s; }
+  @keyframes screenShake {
+    0%,100% { transform: translate(0,0); }
+    10% { transform: translate(-3px, 2px); } 20% { transform: translate(4px, -2px); }
+    30% { transform: translate(-4px, 3px); } 40% { transform: translate(3px, -1px); }
+    50% { transform: translate(-2px, 2px); } 60% { transform: translate(2px, -2px); }
+    70% { transform: translate(-3px, 1px); } 80% { transform: translate(2px, -1px); }
+    90% { transform: translate(-1px, 1px); }
+  }
+
+  .character { position: absolute; bottom: 0; display: flex; flex-direction: column; align-items: center; z-index: 3; }
+  .character.player { left: 0; width: 130px; }
+  .character.enemy { right: 0; width: 170px; }
+  .character .body { width: 100%; height: auto; display: block; filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)); transform-origin: 50% 95%; position: relative; z-index: 2; }
+  .character .name { font-size: 0.78rem; margin-top: -6px; font-weight: bold; background: rgba(26,15,8,0.9); color: #f4c95d; padding: 3px 10px; border-radius: 4px; border: 1px solid #8b6a2a; letter-spacing: 0.1em; z-index: 5; position: relative; }
+  .character .shadow { position: absolute; bottom: 20px; width: 80%; height: 18px; left: 50%; transform: translateX(-50%); background: radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.3) 40%, transparent 70%); z-index: 1; filter: blur(3px); animation: shadowBreath 3s ease-in-out infinite; }
+  .character.enemy .shadow { animation-duration: 3.8s; }
+  @keyframes shadowBreath { 0%,100% { transform: translateX(-50%) scale(1,1); opacity: 0.9; } 50% { transform: translateX(-50%) scale(0.92, 0.9); opacity: 1; } }
+
+  .character .aura { position: absolute; left: 50%; bottom: 10px; width: 140%; height: 130%; transform: translateX(-50%); border-radius: 50%; opacity: 0; pointer-events: none; z-index: 1; filter: blur(14px); transition: opacity 0.2s; }
+  .character.player .aura { background: radial-gradient(ellipse at center, rgba(255,230,120,0.95) 0%, rgba(255,180,50,0.7) 25%, rgba(255,140,20,0.4) 45%, transparent 70%); }
+  .character.enemy .aura { background: radial-gradient(ellipse at center, rgba(255,80,80,0.95) 0%, rgba(220,30,30,0.7) 25%, rgba(130,0,0,0.4) 45%, transparent 70%); }
+  .character.charging .aura { opacity: 1; animation: auraFlame 0.3s ease-in-out infinite; }
+  @keyframes auraFlame { 0%,100% { transform: translateX(-50%) scale(1, 1); } 50% { transform: translateX(-50%) scale(1.08, 1.15); } }
+  .aura-particle { position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; animation: particleRise 0.8s ease-out forwards; z-index: 4; }
+  .aura-particle.gold { background: radial-gradient(circle, #fff6d5, #f4c95d 50%, transparent); box-shadow: 0 0 12px #f4c95d; }
+  .aura-particle.red { background: radial-gradient(circle, #ffcccc, #dc2626 50%, transparent); box-shadow: 0 0 12px #dc2626; }
+  @keyframes particleRise { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-110px) scale(0.2); opacity: 0; } }
+
+  .character.player.idle .body { animation: idleLight 3s ease-in-out infinite; }
+  .character.enemy.idle .body  { animation: idleHeavy 3.8s ease-in-out infinite; }
+  @keyframes idleLight { 0%,100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-5px) scale(1.01, 0.99); } }
+  @keyframes idleHeavy { 0%,100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-3px) scale(1.025, 0.975); } }
+
+  .character.charging .body { animation: chargeShake 0.1s linear infinite; }
+  @keyframes chargeShake { 0%,100% { transform: translateX(0) scale(1.02); } 25% { transform: translateX(-1.5px) scale(1.02); } 75% { transform: translateX(1.5px) scale(1.02); } }
+
+  .character.throw-sling .body { animation: throwSling 0.55s cubic-bezier(0.5,0,0.75,1) forwards; }
+  @keyframes throwSling { 0% { transform: translateX(0) rotate(0); } 20% { transform: translateX(-10px) rotate(-18deg) scale(0.95); } 50% { transform: translateX(20px) rotate(22deg) scale(1.08); } 75% { transform: translateX(12px) rotate(10deg) scale(1.02); } 100% { transform: translateX(0) rotate(0); } }
+  .character.throw-heavy .body { animation: throwHeavy 0.5s ease-out forwards; }
+  @keyframes throwHeavy { 0% { transform: translateX(0) rotate(0); } 30% { transform: translateX(14px) rotate(12deg) scale(0.98); } 55% { transform: translateX(-22px) rotate(-14deg) scale(1.1); } 100% { transform: translateX(-6px) rotate(-4deg) scale(1); } }
+
+  .character.hurt .body { animation: hurt 0.55s; }
+  @keyframes hurt { 0%,100% { transform: translateX(0); filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)); } 20% { transform: translateX(-10px); filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)) brightness(2) hue-rotate(320deg); } 50% { transform: translateX(12px); filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)) brightness(2) hue-rotate(320deg); } 80% { transform: translateX(-6px); filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)) brightness(1.4); } }
+
+  .character.player.critical .body { animation: criticalFlyLeft 1.2s cubic-bezier(0.3,0.1,0.3,1) forwards; }
+  .character.enemy.critical .body { animation: criticalFlyRight 1.2s cubic-bezier(0.3,0.1,0.3,1) forwards; }
+  @keyframes criticalFlyLeft { 0% { transform: translate(0, 0) rotate(0); } 15% { transform: translate(-25px, -40px) rotate(-60deg); filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)) brightness(2) hue-rotate(320deg); } 35% { transform: translate(-70px, -80px) rotate(-180deg); } 55% { transform: translate(-90px, -60px) rotate(-280deg); } 80% { transform: translate(-60px, -10px) rotate(-350deg); } 100% { transform: translate(0, 0) rotate(-360deg); } }
+  @keyframes criticalFlyRight { 0% { transform: translate(0, 0) rotate(0); } 15% { transform: translate(25px, -40px) rotate(60deg); filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)) brightness(2) hue-rotate(320deg); } 35% { transform: translate(70px, -80px) rotate(180deg); } 55% { transform: translate(90px, -60px) rotate(280deg); } 80% { transform: translate(60px, -10px) rotate(350deg); } 100% { transform: translate(0, 0) rotate(360deg); } }
+
+  .character.player.celebrate .body { animation: davidCheer 1s ease-out; }
+  .character.enemy.celebrate  .body { animation: goliathTaunt 1s ease-in-out; }
+  @keyframes davidCheer { 0% { transform: translateY(0) scale(1); } 25% { transform: translateY(-28px) scale(1.08) rotate(-5deg); } 50% { transform: translateY(-34px) scale(1.1) rotate(5deg); } 75% { transform: translateY(-12px) scale(1.05) rotate(-2deg); } 100% { transform: translateY(0) scale(1); } }
+  @keyframes goliathTaunt { 0% { transform: scale(1) translateY(0); } 25% { transform: scale(1.12) translateY(-8px) rotate(-2deg); } 45% { transform: scale(1.15) translateY(-10px) rotate(3deg); } 65% { transform: scale(1.12) translateY(-6px) rotate(-2deg); } 100% { transform: scale(1) translateY(0); } }
+
+  .character.player.victory .body { animation: davidVictory 2s ease-out infinite; }
+  .character.enemy.victory  .body { animation: goliathVictory 1.8s ease-out forwards; }
+  @keyframes davidVictory { 0% { transform: translateY(-12px) scale(1.1); } 40% { transform: translateY(-28px) scale(1.12) rotate(-3deg); } 60% { transform: translateY(-28px) scale(1.12) rotate(3deg); } 100% { transform: translateY(-12px) scale(1.1); } }
+  @keyframes goliathVictory { 0% { transform: scale(1) translateY(0); } 40% { transform: scale(1.25) translateY(-15px) rotate(-3deg); } 60% { transform: scale(1.25) translateY(-15px) rotate(3deg); } 100% { transform: scale(1.2) translateY(-8px); filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)) drop-shadow(0 0 30px rgba(220,38,38,0.7)); } }
+
+  .character.defeated .body { animation: defeated 1.2s ease-out forwards; }
+  @keyframes defeated { 0% { transform: translateY(0) rotate(0) scale(1); opacity: 1; filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)); } 30% { transform: translateY(-10px) rotate(10deg); } 100% { transform: translateY(40px) rotate(-25deg) scale(0.9); opacity: 0.55; filter: drop-shadow(4px 6px 8px rgba(26,15,8,0.7)) grayscale(0.6); } }
+
+
+  /* === Speech bubble === */
+  .speech-bubble {
+    position: absolute;
+    background: rgba(255, 252, 240, 0.97);
+    color: #2a1810;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 0.82rem;
+    font-weight: bold;
+    line-height: 1.4;
+    max-width: 180px;
+    z-index: 22;
+    border: 2px solid #8b6a2a;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    animation: bubblePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    white-space: normal;
+  }
+  .speech-bubble.player { left: 110px; top: 15%; transform-origin: bottom left; }
+  .speech-bubble.enemy  { right: 145px; top: 8%; transform-origin: bottom right; }
+  .speech-bubble::after {
+    content: "";
+    position: absolute;
+    width: 0; height: 0;
+    border-style: solid;
+  }
+  .speech-bubble.player::after {
+    left: 14px; bottom: -10px;
+    border-width: 12px 10px 0 0;
+    border-color: rgba(255,252,240,0.97) transparent transparent transparent;
+    filter: drop-shadow(0 1px 0 #8b6a2a);
+  }
+  .speech-bubble.enemy::after {
+    right: 14px; bottom: -10px;
+    border-width: 12px 0 0 10px;
+    border-color: rgba(255,252,240,0.97) transparent transparent transparent;
+    filter: drop-shadow(0 1px 0 #8b6a2a);
+  }
+  .speech-bubble.fading { animation: bubbleFade 0.3s ease-in forwards; }
+  @keyframes bubblePop {
+    0%   { opacity: 0; transform: scale(0.3); }
+    70%  { opacity: 1; transform: scale(1.08); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes bubbleFade { to { opacity: 0; transform: scale(0.9); } }
+
+  .music-note { position: absolute; font-size: 1.6rem; color: #f4c95d; text-shadow: 0 0 12px rgba(244,201,93,0.9), 0 2px 4px rgba(0,0,0,0.7); animation: floatNote 2.5s ease-out forwards; pointer-events: none; z-index: 25; }
+  @keyframes floatNote { 0% { transform: translate(0, 0) scale(0.5) rotate(0); opacity: 0; } 20% { transform: translate(-5px, -20px) scale(1.1) rotate(-15deg); opacity: 1; } 80% { opacity: 0.9; } 100% { transform: translate(20px, -120px) scale(0.7) rotate(25deg); opacity: 0; } }
+  .divine-light { position: absolute; pointer-events: none; z-index: 24; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(244,201,93,0.5) 0%, rgba(244,201,93,0.2) 40%, transparent 70%); animation: divineLight 2s ease-out infinite; }
+  @keyframes divineLight { 0%,100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.3); opacity: 1; } }
+
+  .ball { position: absolute; width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.2) 6%, transparent 14%), radial-gradient(circle at 50% 50%, #e53935 0%, #c62828 50%, #8a1515 85%, #4a0a0a 100%); box-shadow: 0 6px 12px rgba(0,0,0,0.6), inset -5px -5px 10px rgba(0,0,0,0.35), inset 3px 3px 6px rgba(255,150,150,0.3); display: none; z-index: 10; overflow: hidden; }
+  .ball::before { content: ""; position: absolute; top: 48%; left: -5%; right: -5%; height: 2px; background: rgba(0,0,0,0.4); border-radius: 2px; transform: rotate(15deg); box-shadow: 0 2px 0 rgba(255,255,255,0.2); }
+  .ball::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; background: radial-gradient(circle, transparent 50%, rgba(244,201,93,0.3) 60%, transparent 75%); opacity: 0; animation: ballGlow 0.3s ease-in-out infinite; }
+  .ball.flying-right::after, .ball.flying-left::after { opacity: 1; }
+  @keyframes ballGlow { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+
+  .ball.flying-right { display: block; animation: slingFlyRight 0.75s linear forwards; }
+  .ball.flying-left  { display: block; animation: throwFlyLeft 0.95s ease-out forwards; }
+  @keyframes slingFlyRight { 0% { left: 95px; top: 45%; transform: rotate(0deg) scale(0.6); } 30% { top: 30%; transform: rotate(540deg) scale(1.1); } 100% { left: calc(100% - 150px); top: 48%; transform: rotate(1440deg) scale(1); } }
+  @keyframes throwFlyLeft { 0% { right: 135px; top: 35%; transform: rotate(0deg) scale(0.55); } 50% { top: 15%; transform: rotate(-360deg) scale(1.2); } 100% { right: calc(100% - 125px); top: 55%; transform: rotate(-720deg) scale(1); } }
+
+  .verse-display { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: rgba(26,15,8,0.95); border: 2px solid #f4c95d; border-radius: 12px; padding: 14px 20px; max-width: 90%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.7), 0 0 30px rgba(244,201,93,0.3); font-size: 0.95rem; line-height: 1.55; z-index: 20; color: #f4e4c1; animation: verseIn 0.4s; }
+  @keyframes verseIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.9); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+
+  .control-panel { padding: 16px; background: linear-gradient(180deg, #2a1810 0%, #1a0f08 100%); border-top: 2px solid #8b6a2a; min-height: 180px; position: relative; z-index: 5; }
+  .judge-prompt { text-align: center; font-size: 1rem; margin-bottom: 12px; font-weight: bold; color: #f4c95d; letter-spacing: 0.08em; }
+  .timer-bar { background: #1a0f08; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 16px; border: 1px solid #8b6a2a; }
+  .timer-bar-inner { background: linear-gradient(90deg, #ef4444, #fbbf24); height: 100%; transition: width 0.1s linear; }
+  .judge-buttons { display: flex; gap: 28px; justify-content: center; }
+  .judge-btn { width: 88px; height: 88px; border-radius: 50%; border: 5px solid; background: #1a0f08; font-size: 2.8rem; cursor: pointer; font-weight: bold; transition: transform 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
+  .judge-btn.correct-btn { border-color: #22c55e; color: #22c55e; box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 20px rgba(34,197,94,0.4); }
+  .judge-btn.wrong-btn { border-color: #dc2626; color: #dc2626; box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 20px rgba(220,38,38,0.4); }
+  .judge-btn:active { transform: scale(0.92); }
+
+  .hand-title { text-align: center; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold; color: #e8c896; letter-spacing: 0.08em; }
+  .verse-cards { display: flex; flex-direction: column; gap: 8px; }
+  .verse-card { background: #2a1810; border: 2px solid #8b6a2a; border-radius: 8px; padding: 10px 62px 10px 12px; font-size: 0.88rem; cursor: pointer; position: relative; text-align: left; transition: transform 0.1s, background 0.15s; font-family: inherit; color: #f4e4c1; line-height: 1.5; }
+  .verse-card:active { transform: scale(0.98); background: #3a2410; }
+  .verse-card .tag { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.72rem; padding: 4px 10px; border-radius: 12px; font-weight: bold; letter-spacing: 0.05em; }
+  .verse-card .tag.real { background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid #22c55e; }
+  .verse-card .tag.fake { background: rgba(220,38,38,0.2); color: #f87171; border: 1px solid #dc2626; }
+
+  .result-message { text-align: center; font-size: 1.05rem; font-weight: bold; padding: 16px 10px 4px; line-height: 1.5; }
+  .result-message.hit { color: #f87171; }
+  .result-message.dodge { color: #4ade80; }
+  .result-message.crit { color: #fbbf24; font-size: 1.2rem; text-shadow: 0 0 10px rgba(251,191,36,0.6); }
+  .source-text { text-align: center; font-size: 0.82rem; color: #e8c896; margin-top: 8px; padding: 0 10px 10px; line-height: 1.5; }
+
+  .damage-popup { position: absolute; font-size: 2.4rem; font-weight: bold; color: #f87171; text-shadow: 2px 2px 0 #1a0f08, -2px -2px 0 #1a0f08, 2px -2px 0 #1a0f08, -2px 2px 0 #1a0f08, 0 0 20px rgba(220,38,38,0.8); animation: damageFloat 1s ease-out forwards; pointer-events: none; z-index: 30; }
+  .damage-popup.crit { color: #fbbf24; font-size: 3.2rem; text-shadow: 3px 3px 0 #1a0f08, -3px -3px 0 #1a0f08, 3px -3px 0 #1a0f08, -3px 3px 0 #1a0f08, 0 0 30px rgba(251,191,36,1); animation: damageFloatBig 1.3s ease-out forwards; }
+  @keyframes damageFloat { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 30% { transform: translateY(-20px) scale(1.4); opacity: 1; } 100% { transform: translateY(-70px) scale(1); opacity: 0; } }
+  @keyframes damageFloatBig { 0% { transform: translateY(0) scale(0.3) rotate(-15deg); opacity: 0; } 20% { transform: translateY(-10px) scale(1.6) rotate(5deg); opacity: 1; } 50% { transform: translateY(-30px) scale(1.4) rotate(-3deg); opacity: 1; } 100% { transform: translateY(-90px) scale(1.2); opacity: 0; } }
+
+  .critical-text { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: 2.6rem; font-weight: 900; color: #fbbf24; letter-spacing: 0.15em; font-family: 'Georgia', serif; font-style: italic; text-shadow: 3px 3px 0 #7c2d12, 6px 6px 0 #1a0f08, 0 0 30px rgba(251,191,36,1); z-index: 60; pointer-events: none; animation: critPopup 1.2s ease-out forwards; }
+  @keyframes critPopup { 0% { transform: translate(-50%, -50%) scale(0.3) rotate(-15deg); opacity: 0; } 20% { transform: translate(-50%, -50%) scale(1.5) rotate(5deg); opacity: 1; } 40% { transform: translate(-50%, -50%) scale(1.2) rotate(-3deg); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0; } }
+
+  .turn-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; font-weight: bold; background: rgba(26,15,8,0.95); color: #f4c95d; padding: 14px 24px; border-radius: 12px; z-index: 40; animation: turnFade 1.4s forwards; pointer-events: none; letter-spacing: 0.1em; border: 2px solid #f4c95d; box-shadow: 0 4px 30px rgba(0,0,0,0.8), 0 0 40px rgba(244,201,93,0.4); white-space: nowrap; }
+  @keyframes turnFade { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 30%,70%{ opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); } }
+
+  .flash-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 50; background: rgba(220,38,38,0.4); animation: flashOut 0.3s ease-out forwards; }
+  .flash-overlay.crit-flash { background: radial-gradient(circle, rgba(251,191,36,0.7), rgba(220,38,38,0.5)); animation: flashOut 0.5s ease-out forwards; }
+  @keyframes flashOut { from { opacity: 1; } to { opacity: 0; } }
+
+  .gameover-screen { text-align: center; padding: 60px 20px; min-height: 100vh; background: linear-gradient(180deg, rgba(26,15,8,0.7), rgba(26,15,8,0.95)), url("./background.jpg") center/cover; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .gameover-screen .gover-icon { font-size: 4rem; color: #f4c95d; margin: 6px 0; text-shadow: 0 0 24px rgba(244,201,93,0.8); }
+  .gameover-screen h2 { font-size: 2.4rem; margin-bottom: 12px; letter-spacing: 0.2em; text-shadow: 3px 3px 0 #1a0f08, 0 0 24px currentColor; }
+  .gameover-screen h2.win { color: #f4c95d; }
+  .gameover-screen h2.lose { color: #dc2626; }
+  .gameover-screen .comment { margin: 20px 0 30px; font-size: 1rem; line-height: 1.8; color: #f4e4c1; max-width: 340px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- 音声は空のまま生成、Blob URLを後でsrcに設定 -->
+<audio id="bgm-title" loop preload="auto" src="./title.mp3"></audio>
+<audio id="bgm-battle" loop preload="auto" src="./battle.mp3"></audio>
+<audio id="sfx-victory" preload="auto" src="./victory.mp3"></audio>
+<audio id="sfx-defeat" preload="auto" src="./defeat.mp3"></audio>
+
+<!-- 音源base64データをscript-data形式で保持（audio srcには入れない） -->
+<script>
+  const DAVID_IMG = "./david.png";
+  const GOLIATH_IMG = "./goliath.png";
+
+/* =================== MUSIC =================== */
+  const music = {
+    volume: 0.35, jingleVol: 0.55,
+    current: null, el: {}, loaded: false,
+    init() {
+      this.el.title = document.getElementById('bgm-title');
+      this.el.battle = document.getElementById('bgm-battle');
+      this.el.victory = document.getElementById('sfx-victory');
+      this.el.defeat = document.getElementById('sfx-defeat');
+    },
+    async loadAll() {
+      if (this.loaded) return;
+      // 外部ファイルなので src は既に設定済み。ボリュームのみ設定。
+      this.el.title.volume = this.volume;
+      this.el.battle.volume = this.volume;
+      this.el.victory.volume = this.jingleVol;
+      this.el.defeat.volume = this.jingleVol;
+      this.loaded = true;
+    },
+    async playTrack(name) {
+      if (!sound.enabled) { this.current = name; return; }
+      ['title','battle'].forEach(k => {
+        if (k !== name && this.el[k] && !this.el[k].paused) this.el[k].pause();
+      });
+      const a = this.el[name]; if (!a) return;
+      a.currentTime = 0; a.volume = this.volume;
+      this.current = name;
+      try { await a.play(); } catch (err) { console.warn('[music]', err); showMusicError(err.message); }
+    },
+    async playJingle(name) {
+      if (!sound.enabled) return;
+      const j = this.el[name]; if (!j) return;
+      if (this.current && this.el[this.current] && !this.el[this.current].paused) {
+        this.el[this.current].volume = 0.1;
+      }
+      j.currentTime = 0; j.volume = this.jingleVol;
+      try { await j.play(); } catch(e) { console.warn('[jingle]', e); }
+      j.onended = () => { if (this.current && this.el[this.current]) this.el[this.current].volume = this.volume; };
+    },
+    stopAll() { Object.values(this.el).forEach(a => { if (a && !a.paused) a.pause(); }); }
+  };
+
+  function showMusicError(msg) {
+    const e = document.createElement('div');
+    e.innerHTML = '⚠ 音声エラー: ' + (msg || '再生不可') + '<br><small>このアプリ内ブラウザでは音声が制限されている可能性があります。Safariなどで開いてみてください。</small>';
+    e.style.cssText = 'position:fixed;top:60px;right:10px;z-index:9999;background:#dc2626;color:#fff;padding:8px 12px;border-radius:6px;font-size:0.72rem;max-width:280px;line-height:1.4;box-shadow:0 4px 12px rgba(0,0,0,0.5);';
+    document.body.appendChild(e);
+    setTimeout(() => e.remove(), 6000);
+  }
+
+  /* =================== SFX (Web Audio synth) =================== */
+  const sfx = {
+    ctx: null,
+    ensureCtx() { if (!this.ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return false; this.ctx = new C(); } if (this.ctx.state === 'suspended') this.ctx.resume(); return true; },
+    play(fn) { if (!sound.enabled || !this.ensureCtx()) return; try { fn(this.ctx); } catch(e) {} },
+    chargeUp() { this.play(ctx => {
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type='sawtooth';
+      o.frequency.setValueAtTime(80, t); o.frequency.exponentialRampToValueAtTime(280, t+0.55);
+      const f = ctx.createBiquadFilter(); f.type='lowpass';
+      f.frequency.setValueAtTime(200, t); f.frequency.exponentialRampToValueAtTime(1200, t+0.55);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t+0.3);
+      g.gain.linearRampToValueAtTime(0.28, t+0.55); g.gain.exponentialRampToValueAtTime(0.001, t+0.7);
+      o.connect(f).connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.75);
+    }); },
+    whoosh() { this.play(ctx => {
+      const t = ctx.currentTime, bs = ctx.sampleRate * 0.4;
+      const buf = ctx.createBuffer(1, bs, ctx.sampleRate); const d = buf.getChannelData(0);
+      for (let i=0;i<bs;i++) d[i] = (Math.random()*2-1) * (1 - i/bs);
+      const s = ctx.createBufferSource(); s.buffer = buf;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass';
+      f.frequency.setValueAtTime(2000, t); f.frequency.exponentialRampToValueAtTime(250, t+0.4); f.Q.value = 4;
+      const g = ctx.createGain(); g.gain.value = 0.35;
+      s.connect(f).connect(g).connect(ctx.destination); s.start(t); s.stop(t+0.45);
+    }); },
+    impact() { this.play(ctx => {
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type='sine';
+      o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(40,t+0.2);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.45,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+      o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.3);
+    }); },
+    critImpact() { this.play(ctx => {
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type='triangle';
+      o.frequency.setValueAtTime(80,t); o.frequency.exponentialRampToValueAtTime(30,t+0.5);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.7,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.55);
+      o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.6);
+      const o2 = ctx.createOscillator(); o2.type='square';
+      o2.frequency.setValueAtTime(400,t); o2.frequency.exponentialRampToValueAtTime(120,t+0.25);
+      const g2 = ctx.createGain(); g2.gain.setValueAtTime(0.2,t); g2.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+      const f2 = ctx.createBiquadFilter(); f2.type='bandpass'; f2.frequency.value=600; f2.Q.value=2;
+      o2.connect(f2).connect(g2).connect(ctx.destination); o2.start(t); o2.stop(t+0.35);
+      const bs = ctx.sampleRate * 0.25;
+      const buf = ctx.createBuffer(1,bs,ctx.sampleRate); const d = buf.getChannelData(0);
+      for (let i=0;i<bs;i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/bs, 2);
+      const s = ctx.createBufferSource(); s.buffer = buf;
+      const ng = ctx.createGain(); ng.gain.value = 0.35;
+      s.connect(ng).connect(ctx.destination); s.start(t); s.stop(t+0.25);
+    }); },
+    dodge() { this.play(ctx => {
+      const t = ctx.currentTime;
+      [523.25,659.25,783.99].forEach((freq,i) => {
+        const o = ctx.createOscillator(); o.type='triangle'; o.frequency.value = freq;
+        const g = ctx.createGain(); const st = t + i*0.06;
+        g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(0.18,st+0.02); g.gain.exponentialRampToValueAtTime(0.001,st+0.4);
+        o.connect(g).connect(ctx.destination); o.start(st); o.stop(st+0.45);
+      });
+    }); },
+    turnChime() { this.play(ctx => {
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type='sine'; o.frequency.value=880;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.12,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
+      o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.45);
+    }); }
+  };
+
+  const sound = { enabled: false };
+
+  async function toggleSound(btn) {
+    if (btn.classList.contains('loading')) return;
+    btn.classList.add('loading');
+    try {
+      if (!sound.enabled) {
+        // ユーザージェスチャー内で全音源ロード＆再生
+        sfx.ensureCtx();
+        await music.loadAll();
+        sound.enabled = true;
+        btn.textContent = '🔊';
+        btn.classList.add('on');
+        sfx.turnChime();
+        const target = (state.phase === 'title') ? 'title' : 'battle';
+        await music.playTrack(target);
+        const hint = document.querySelector('.music-hint'); if (hint) hint.remove();
+      } else {
+        sound.enabled = false;
+        btn.textContent = '🔇';
+        btn.classList.remove('on');
+        music.stopAll();
+      }
+    } catch (err) {
+      console.error('[toggleSound]', err);
+      showMusicError(err.message);
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
+  window.toggleSound = toggleSound;
+
+  const realVerses = [
+    { text: "はじめに神は天と地とを創造された", source: "創世記 1:1" },
+    { text: "光あれ", source: "創世記 1:3" },
+    { text: "神はそのひとり子を賜わったほどに、世を愛された", source: "ヨハネ 3:16" },
+    { text: "神は愛である", source: "ヨハネ第一 4:8" },
+    { text: "主はわたしの牧者であって、わたしには乏しいことがない", source: "詩篇 23:1" },
+    { text: "求めよ、そうすれば、与えられるであろう", source: "マタイ 7:7" },
+    { text: "狭い門からはいれ", source: "マタイ 7:13" },
+    { text: "人はパンだけで生きるものではない", source: "マタイ 4:4" },
+    { text: "自分を愛するように、あなたの隣り人を愛せよ", source: "マタイ 22:39" },
+    { text: "もし、だれかがあなたの右の頬を打つなら、ほかの頬をも向けてやりなさい", source: "マタイ 5:39" },
+    { text: "いつまでも存続するものは、信仰と希望と愛と、この三つである。そのうちで最も大いなるものは、愛である", source: "コリント第一 13:13" },
+    { text: "初めに言があった。言は神と共にあった。言は神であった", source: "ヨハネ 1:1" },
+    { text: "つるぎをとる者はみな、つるぎで滅びる", source: "マタイ 26:52" },
+    { text: "敵を愛し、迫害する者のために祈れ", source: "マタイ 5:44" },
+    { text: "わたしは道であり、真理であり、命である", source: "ヨハネ 14:6" },
+    { text: "金銭を愛することは、すべての悪の根である", source: "テモテ第一 6:10" },
+    { text: "目には目、歯には歯", source: "出エジプト記 21:24" },
+    { text: "殺してはならない", source: "出エジプト記 20:13" },
+    { text: "心をつくし、精神をつくし、思いをつくして、主なるあなたの神を愛せよ", source: "マタイ 22:37" },
+    { text: "すべて重荷を負うて苦労している者は、わたしのもとにきなさい。あなたがたを休ませてあげよう", source: "マタイ 11:28" },
+    { text: "あなたがたの光を人々の前に輝かしなさい", source: "マタイ 5:16" },
+    { text: "信仰がなくては、神に喜ばれることはできない", source: "ヘブル 11:6" },
+    { text: "悲しんでいる人たちは、さいわいである、彼らは慰められるであろう", source: "マタイ 5:4" },
+    { text: "柔和な人たちは、さいわいである、彼らは地を受けつぐであろう", source: "マタイ 5:5" },
+    { text: "心の清い人たちは、さいわいである、彼らは神を見るであろう", source: "マタイ 5:8" },
+    { text: "平和をつくり出す人たちは、さいわいである、彼らは神の子と呼ばれるであろう", source: "マタイ 5:9" },
+    { text: "わたしは世の光である", source: "ヨハネ 8:12" },
+    { text: "わたしを信じる者は、聖書に書いてあるとおり、その腹から生ける水が川となって流れ出るであろう", source: "ヨハネ 7:38" },
+    { text: "神の国と神の義とをまず求めなさい", source: "マタイ 6:33" },
+    { text: "明日のことを思いわずらうな。明日のことは明日自身が思いわずらうであろう", source: "マタイ 6:34" },
+    { text: "人に裁かれないためには、人を裁くな", source: "マタイ 7:1" },
+    { text: "すべての人を敬いなさい。兄弟たちを愛し、神をおそれ、王を尊びなさい", source: "ペテロ第一 2:17" },
+    { text: "主を恐れることは知恵のもとである", source: "箴言 1:7" },
+    { text: "望んでいる事がらを確信し、まだ見ていない事実を確認することである", source: "ヘブル 11:1" },
+    { text: "罪の支払う報酬は死である", source: "ローマ 6:23" },
+    { text: "すべての事は、神を愛する者たちすなわち、ご計画に従って召された者たちには、共に働いて益となる", source: "ローマ 8:28" },
+    { text: "何事も思いわずらってはならない", source: "ピリピ 4:6" },
+    { text: "わたしを強くして下さるかたによって、何事でもすることができる", source: "ピリピ 4:13" },
+    { text: "きよくなければ、だれも主を見ることはできない", source: "ヘブル 12:14" },
+    { text: "わたしはアルパでありオメガである、最初の者であり、最後の者である", source: "黙示録 22:13" },
+    { text: "あなたの若い日にあなたの造り主を覚えよ", source: "伝道の書 12:1" },
+    { text: "互に愛し合いなさい", source: "ヨハネ 13:34" },
+    { text: "神はみずから助くる者を見捨てたまわず、むしろ自分をむなしくする者を顧みられる", source: "（参考: 神のへりくだった者への愛）" }
+  ];
+  const fakeVerses = [
+    { text: "天は自ら助くる者を助く", hint: "B・フランクリンの言葉。聖書ではない" },
+    { text: "沈黙は金、雄弁は銀なり", hint: "イギリスの諺。聖書ではない" },
+    { text: "急がば回れ、主の道は遠し", hint: "日本の諺に創作を足したもの" },
+    { text: "星を数える者に福あれ", hint: "完全な創作" },
+    { text: "笑う門には天国の扉が開く", hint: "日本の諺を改変した創作" },
+    { text: "鉄は熱いうちに打て、信仰は若きうちに", hint: "諺と創作の合成" },
+    { text: "金は諸悪の根源である", hint: "正しくは「金銭を愛すること」が悪の根" },
+    { text: "美しき花には棘あり、されど神の愛に棘なし", hint: "完全な創作" },
+    { text: "朝の祈りは夜の嘆きに勝る", hint: "完全な創作" },
+    { text: "月は夜を照らし、神は心を照らす", hint: "完全な創作" },
+    { text: "千里の道も一歩から、天国への道も祈りから", hint: "諺と創作の合成" },
+    { text: "汝の敵を知り、神の敵を愛せよ", hint: "創作。本物は「敵を愛せよ」" },
+    { text: "神は細部に宿る", hint: "建築家ミースの言葉。聖書ではない" },
+    { text: "時は金なり、魂はなお尊し", hint: "フランクリン+創作" },
+    { text: "ペンは剣よりも強し", hint: "ブルワー=リットンの戯曲の台詞" },
+    { text: "蒔かぬ種は生えぬ、祈らぬ者に恵みなし", hint: "諺と創作の合成" },
+    { text: "神を信じる者、恐るるに足らず", hint: "完全な創作。聖書の文言ではない" },
+    { text: "光なき場所にこそ、真の光あり", hint: "哲学的な創作" },
+    { text: "七転び八起き、信仰も同じ", hint: "日本の諺を改変した創作" },
+    { text: "人事を尽くして天命を待つ", hint: "中国の儒教的な言葉。聖書ではない" },
+    { text: "神は乗り越えられない試練を与えない", hint: "よく誤用される。聖書の直接の言葉ではない" },
+    { text: "一日一善、主もこれを喜び給う", hint: "日本の標語を改変した創作" },
+    { text: "己を知る者は賢く、神を知る者は福なり", hint: "ソクラテス風+創作" },
+    { text: "祈る者に道は開かれ、怠る者に闇が訪れる", hint: "完全な創作" },
+    { text: "天国の門は狭く、地獄の道は広し", hint: "マタイ7:13の表現を改変した創作" },
+    { text: "人は見かけによらず、神は心を見たまう", hint: "前半は諺、後半だけなら聖書的だが合成" },
+    { text: "信じる者は救われ、疑う者は沈む", hint: "後半は完全な創作" },
+    { text: "主を愛せよ、されば汝の敵も友とならん", hint: "完全な創作" }
+  ];
+
+  const MAX_HP = 100, DAMAGE_NORMAL = 10, DAMAGE_CRITICAL = 40, TURN_TIME = 7000;
+  let state = { phase: 'title' };
+  let timerInterval = null;
+
+  const ANIM_CLASSES = ['idle','charging','throw-sling','throw-heavy','hurt','critical','celebrate','victory','defeated'];
+  function clearAnim(el) { if (!el) return; ANIM_CLASSES.forEach(c => el.classList.remove(c)); }
+  function setIdle(who) { const c = document.getElementById(who==='player'?'playerChar':'enemyChar'); if (!c || state.phase === 'gameover') return; clearAnim(c); c.classList.add('idle'); }
+  function setAnim(who, cls, duration, returnIdle = true) {
+    const c = document.getElementById(who==='player'?'playerChar':'enemyChar');
+    if (!c) return;
+    clearAnim(c); c.classList.add(cls);
+    if (returnIdle && duration) setTimeout(() => { c.classList.remove(cls); if (state.phase !== 'gameover') c.classList.add('idle'); }, duration);
+  }
+
+  function shuffle(arr) { const a = [...arr]; for (let i=a.length-1;i>0;i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; }
+  function randomVerse() { const isReal = Math.random() < 0.5; const pool = isReal ? realVerses : fakeVerses; return { ...pool[Math.floor(Math.random()*pool.length)], isReal }; }
+  function drawHand() { const r = shuffle(realVerses).slice(0,2).map(v=>({...v,isReal:true})); const f = shuffle(fakeVerses).slice(0,2).map(v=>({...v,isReal:false})); return shuffle([...r, ...f]); }
+  function wait(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+  let praiseSkipResolve = null;
+  function waitForSkipOrTimeout(ms) {
+    return new Promise(resolve => {
+      praiseSkipResolve = resolve;
+      setTimeout(() => { if (praiseSkipResolve === resolve) { praiseSkipResolve = null; resolve(); } }, ms);
+    });
+  }
+  function skipPraise() {
+    // 音楽をフェードアウトして次へ
+    if (music.el.victory && !music.el.victory.paused) {
+      const v = music.el.victory;
+      const startVol = v.volume;
+      let t = 0;
+      const id = setInterval(() => {
+        t += 0.05;
+        v.volume = Math.max(0, startVol * (1 - t));
+        if (t >= 1) { clearInterval(id); v.pause(); }
+      }, 50);
+    }
+    if (praiseSkipResolve) { const r = praiseSkipResolve; praiseSkipResolve = null; r(); }
+  }
+  window.skipPraise = skipPraise;
+
+  const app = document.getElementById('app');
+
+  function soundToggleHTML() {
+    const hint = !sound.enabled ? '<div class="music-hint">🎵 タップで音楽ON</div>' : '';
+    return `<button class="sound-toggle${sound.enabled?' on':''}" onclick="toggleSound(this)">${sound.enabled?'🔊':'🔇'}</button>${hint}`;
+  }
+
+  function render() {
+    if (state.phase === 'title') { renderTitle(); if (sound.enabled) music.playTrack('title'); }
+    else if (state.phase === 'gameover') renderGameOver();
+    else { renderBattle(); if (sound.enabled) music.playTrack('battle'); }
+  }
+
+  function renderTitle() {
+    app.innerHTML = `
+      ${soundToggleHTML()}
+      <div class="title-screen">
+        <div class="game-logo">
+          <div class="logo-crosses">✠ &nbsp; ✠ &nbsp; ✠</div>
+          <div class="logo-shine-wrap"><div class="logo-main">バイブル</div></div>
+          <div class="logo-shine-wrap"><div class="logo-main">ドッヂ</div></div>
+          <div class="logo-sub">BIBLE&nbsp;&nbsp;DODGE</div>
+          <div class="vs-label"><b>ダビデ</b><span class="vs">vs</span><b>ゴリアテ</b></div>
+        </div>
+        <div class="rules">
+          <h3>📜 RULES 📜</h3>
+          ・ボールを投げる時、聖句を叫ぶ<br>
+          ・受ける側は <b>〇(本物)</b> か <b>×(偽物)</b> で判定<br>
+          ・正解でボールを避けると敵に <span class="crit">${DAMAGE_NORMAL}</span> ダメージ<br>
+          ・判定ミスは <span class="crit">CRITICAL ${DAMAGE_CRITICAL}</span> ダメージ！<br>
+          ・先に相手のHPをゼロにしたら勝利
+        </div>
+        <button class="main-btn" onclick="startGame()">戦いを始める</button>
+      </div>`;
+  }
+
+  function renderBattle() {
+    const php = (state.playerHP/MAX_HP)*100, ehp = (state.enemyHP/MAX_HP)*100;
+    const pc = php<25?'critical':php<50?'low':'', ec = ehp<25?'critical':ehp<50?'low':'';
+    app.innerHTML = `
+      ${soundToggleHTML()}
+      <div class="battle-screen">
+        <div class="hp-bars">
+          <div class="hp-bar-wrap">
+            <div class="hp-label">👼 ダビデ</div>
+            <div class="hp-bar-outer"><div class="hp-bar-inner ${pc}" style="width:${php}%"></div></div>
+            <div class="hp-text">${state.playerHP} / ${MAX_HP}</div>
+          </div>
+          <div class="hp-bar-wrap">
+            <div class="hp-label" style="text-align:right">ゴリアテ ⚔️</div>
+            <div class="hp-bar-outer"><div class="hp-bar-inner ${ec}" style="width:${ehp}%"></div></div>
+            <div class="hp-text">${state.enemyHP} / ${MAX_HP}</div>
+          </div>
+        </div>
+        <div class="arena" id="arena">
+          <div class="character player idle" id="playerChar">
+            <div class="aura"></div>
+            <div class="shadow"></div>
+            <img class="body" src="${DAVID_IMG}" alt="ダビデ">
+            <div class="name">ダビデ</div>
+          </div>
+          <div class="character enemy idle" id="enemyChar">
+            <div class="aura"></div>
+            <div class="shadow"></div>
+            <img class="body" src="${GOLIATH_IMG}" alt="ゴリアテ">
+            <div class="name">ゴリアテ</div>
+          </div>
+          <div class="ball" id="ball"></div>
+        </div>
+        <div class="control-panel" id="controlPanel"></div>
+      </div>`;
+    renderControlPanel();
+  }
+
+  function renderControlPanel() {
+    const panel = document.getElementById('controlPanel'); if (!panel) return;
+    if (state.phase === 'playerTurn') {
+      panel.innerHTML = `<div class="hand-title">📜 聖句カードを選んで投げろ</div><div class="verse-cards" id="verseCards"></div>`;
+      const cards = document.getElementById('verseCards');
+      state.hand.forEach((v, i) => {
+        const b = document.createElement('button');
+        b.className = 'verse-card';
+        b.innerHTML = `<div>${v.text}</div><span class="tag ${v.isReal?'real':'fake'}">${v.isReal?'本物':'偽物'}</span>`;
+        b.onclick = () => playerThrow(i);
+        cards.appendChild(b);
+      });
+    } else if (state.phase === 'playerThrowing') { panel.innerHTML = `<div class="judge-prompt">💨 聖句と共に石投げ！</div>`; }
+    else if (state.phase === 'enemyJudging') { panel.innerHTML = `<div class="judge-prompt">🤔 ゴリアテが判定中...</div>`; }
+    else if (state.phase === 'enemyThrow') { panel.innerHTML = `<div class="judge-prompt">⚔️ ゴリアテの番！構えろ！</div>`; }
+    else if (state.phase === 'playerJudge') {
+      panel.innerHTML = `
+        <div class="judge-prompt">この聖句は本物？偽物？</div>
+        <div class="timer-bar"><div class="timer-bar-inner" id="timerBar" style="width:100%"></div></div>
+        <div class="judge-buttons">
+          <button class="judge-btn correct-btn" onclick="playerJudge(true)">〇</button>
+          <button class="judge-btn wrong-btn" onclick="playerJudge(false)">×</button>
+        </div>`;
+    } else if (state.phase === 'result') {
+      const cls = state.lastResult.crit ? 'crit' : state.lastResult.type;
+      panel.innerHTML = `
+        <div class="result-message ${cls}">${state.lastResult.message}</div>
+        <div class="source-text">${state.lastResult.source || ''}</div>`;
+    } else if (state.phase === 'praising') {
+      panel.innerHTML = `
+        <div class="result-message dodge" style="font-size: 1.15rem;">🎤 ダビデの賛美ラップ！ 🎤</div>
+        <div class="source-text">主に栄光を帰すダビデ...</div>
+        <div style="text-align:center; margin-top: 14px;">
+          <button class="main-btn" style="font-size: 0.9rem; padding: 10px 24px;" onclick="skipPraise()">スキップ ▶</button>
+        </div>`;
+    }
+  }
+
+  function updateHPBars() {
+    const php = (state.playerHP/MAX_HP)*100, ehp = (state.enemyHP/MAX_HP)*100;
+    const bars = document.querySelectorAll('.hp-bar-inner'), texts = document.querySelectorAll('.hp-text');
+    if (bars[0]) { bars[0].style.width = php+'%'; bars[0].className = 'hp-bar-inner ' + (php<25?'critical':php<50?'low':''); }
+    if (bars[1]) { bars[1].style.width = ehp+'%'; bars[1].className = 'hp-bar-inner ' + (ehp<25?'critical':ehp<50?'low':''); }
+    if (texts[0]) texts[0].textContent = `${state.playerHP} / ${MAX_HP}`;
+    if (texts[1]) texts[1].textContent = `${state.enemyHP} / ${MAX_HP}`;
+  }
+
+  function showTurnIndicator(text) {
+    const arena = document.getElementById('arena'); if (!arena) return;
+    const ind = document.createElement('div'); ind.className = 'turn-indicator'; ind.textContent = text;
+    arena.appendChild(ind); setTimeout(()=>ind.remove(),1400);
+    sfx.turnChime();
+  }
+  function showVerseDisplay(verse) {
+    const arena = document.getElementById('arena'); if (!arena) return;
+    const vd = document.createElement('div'); vd.className = 'verse-display'; vd.id = 'verseDisplay';
+    vd.textContent = '「' + verse.text + '」'; arena.appendChild(vd);
+  }
+  function hideVerseDisplay() { const vd = document.getElementById('verseDisplay'); if (vd) vd.remove(); }
+
+  function animateBall(direction) {
+    return new Promise(res => {
+      const ball = document.getElementById('ball'); if (!ball) { res(); return; }
+      ball.className = 'ball flying-' + direction;
+      const duration = direction === 'right' ? 750 : 950;
+      setTimeout(() => { ball.className = 'ball'; res(); }, duration);
+    });
+  }
+
+  function showDamage(who, damage, crit) {
+    const arena = document.getElementById('arena'); if (!arena) return;
+    const p = document.createElement('div');
+    p.className = 'damage-popup' + (crit ? ' crit' : '');
+    p.textContent = `-${damage}`;
+    if (who==='player') { p.style.left='50px'; p.style.top='35%'; } else { p.style.right='60px'; p.style.top='25%'; }
+    arena.appendChild(p); setTimeout(()=>p.remove(), crit ? 1300 : 1000);
+  }
+  function showCriticalText() {
+    const arena = document.getElementById('arena'); if (!arena) return;
+    const c = document.createElement('div');
+    c.className = 'critical-text'; c.textContent = 'CRITICAL!';
+    arena.appendChild(c); setTimeout(()=>c.remove(), 1200);
+  }
+  function flashScreen(crit) {
+    const arena = document.getElementById('arena'); if (!arena) return;
+    const f = document.createElement('div'); f.className = 'flash-overlay' + (crit ? ' crit-flash' : '');
+    arena.appendChild(f); setTimeout(()=>f.remove(), crit ? 500 : 300);
+  }
+  function shakeArena() {
+    const arena = document.getElementById('arena'); if (!arena) return;
+    arena.classList.add('shaking');
+    setTimeout(() => arena.classList.remove('shaking'), 500);
+  }
+
+  function spawnAuraParticles(who, count = 8) {
+    const char = document.getElementById(who==='player'?'playerChar':'enemyChar');
+    if (!char) return;
+    const color = who === 'player' ? 'gold' : 'red';
+    const width = char.offsetWidth;
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const p = document.createElement('div');
+        p.className = 'aura-particle ' + color;
+        p.style.left = (Math.random() * width) + 'px';
+        p.style.bottom = (Math.random() * 60 + 20) + 'px';
+        char.appendChild(p);
+        setTimeout(() => p.remove(), 900);
+      }, i * 70);
+    }
+  }
+
+
+  /* === Speech bubbles === */
+  const davidLines = [
+    "主の御名によりて！",
+    "戦いは主のものなり！",
+    "万軍の主が我と共におられる",
+    "恐るるに足らず！",
+    "この石に神の力を込める",
+    "主は我が力、我が盾！",
+    "汝の首、主に献げん！",
+    "見よ、主の業を！",
+    "御言葉はわが剣なり",
+    "主よ、導き給え！",
+    "信仰は勝利の鍵！",
+    "真理は盾となる"
+  ];
+  const goliathResponses = [
+    "小僧が...面白い！",
+    "ふん、笑止千万！",
+    "神だと？見せてみろ！",
+    "その石で何ができる？",
+    "貴様を粉々にしてやる！",
+    "イスラエルの子供よ、覚悟せよ",
+    "ぬかせ小童！",
+    "貴様の神はどこにいる？",
+    "潰してくれるわ！",
+    "ハハハ！面白い見世物だ",
+    "その痩せ腕で何をする？",
+    "恐れを知らぬ愚か者よ"
+  ];
+  const goliathLines = [
+    "我が力を見よ！",
+    "ペリシテの威光、思い知れ！",
+    "イスラエルの神に挑戦する！",
+    "小僧、これが最後だ！",
+    "我が前にひれ伏せ！",
+    "貴様を野の獣に喰わせてやる！"
+  ];
+  const davidResponses = [
+    "主の力は偉大なり！",
+    "恐れはしない！",
+    "主がともにおられる！",
+    "真理の盾で弾き返す！",
+    "ハレルヤ！",
+    "神の言葉は最強の武器！"
+  ];
+
+  function pickLine(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function showBubble(who, text, duration = 2000) {
+    const arena = document.getElementById('arena');
+    if (!arena) return Promise.resolve();
+    // Remove existing bubbles for this character first
+    arena.querySelectorAll('.speech-bubble.' + who).forEach(b => b.remove());
+    const bubble = document.createElement('div');
+    bubble.className = 'speech-bubble ' + who;
+    bubble.textContent = text;
+    arena.appendChild(bubble);
+    return new Promise(resolve => {
+      setTimeout(() => {
+        bubble.classList.add('fading');
+        setTimeout(() => { bubble.remove(); resolve(); }, 300);
+      }, duration);
+    });
+  }
+
+  async function performThrow(who) {
+    const char = document.getElementById(who==='player'?'playerChar':'enemyChar');
+    setAnim(who, 'charging', 0, false);
+    sfx.chargeUp();
+    spawnAuraParticles(who, 8);
+    await wait(550);
+    char.classList.remove('charging');
+    const throwClass = who === 'player' ? 'throw-sling' : 'throw-heavy';
+    char.classList.add(throwClass);
+    sfx.whoosh();
+    const dir = who === 'player' ? 'right' : 'left';
+    animateBall(dir);
+    await wait(who === 'player' ? 550 : 500);
+    char.classList.remove(throwClass);
+    await wait(who === 'player' ? 250 : 500);
+    setIdle(who);
+  }
+
+  function spawnMusicNotes(count = 10) {
+    const char = document.getElementById('playerChar');
+    const arena = document.getElementById('arena');
+    if (!char || !arena) return;
+    const notes = ['🎵','🎶','♪','♫','✨'];
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const note = document.createElement('div');
+        note.className = 'music-note';
+        note.textContent = notes[Math.floor(Math.random()*notes.length)];
+        note.style.left = (char.offsetLeft + char.offsetWidth*0.5 + (Math.random()-0.5)*50) + 'px';
+        note.style.top  = (char.offsetTop + 10) + 'px';
+        arena.appendChild(note);
+        setTimeout(()=>note.remove(), 2500);
+      }, i * 280);
+    }
+  }
+  function showDivineLight() {
+    const char = document.getElementById('playerChar');
+    const arena = document.getElementById('arena');
+    if (!char || !arena) return;
+    const light = document.createElement('div');
+    light.className = 'divine-light';
+    light.style.left = (char.offsetLeft + char.offsetWidth*0.5 - 100) + 'px';
+    light.style.top = (char.offsetTop - 50) + 'px';
+    arena.appendChild(light);
+  }
+
+  function applyHit(who, crit) {
+    const damage = crit ? DAMAGE_CRITICAL : DAMAGE_NORMAL;
+    if (who === 'player') state.playerHP = Math.max(0, state.playerHP - damage);
+    else state.enemyHP = Math.max(0, state.enemyHP - damage);
+    showDamage(who, damage, crit);
+    if (crit) { setAnim(who, 'critical', 1200); showCriticalText(); shakeArena(); flashScreen(true); sfx.critImpact(); }
+    else { setAnim(who, 'hurt', 550); flashScreen(false); sfx.impact(); }
+    updateHPBars();
+  }
+
+  function startGame() {
+    sfx.ensureCtx();
+    if (sound.enabled) music.playTrack('battle');
+    state = { phase: 'battle', playerHP: MAX_HP, enemyHP: MAX_HP, hand: drawHand() };
+    render();
+    playerTurnStart();
+  }
+
+  async function playerTurnStart() {
+    showTurnIndicator('ダビデのターン');
+    await wait(1200);
+    // ダビデが意気込み → ゴリアテが反応
+    showBubble('player', pickLine(davidLines), 1600);
+    await wait(900);
+    showBubble('enemy', pickLine(goliathResponses), 1400);
+    await wait(900);
+    state.phase = 'playerTurn';
+    renderControlPanel();
+  }
+
+  async function playerThrow(handIndex) {
+    const verse = state.hand[handIndex];
+    state.phase = 'playerThrowing'; renderControlPanel();
+    showVerseDisplay(verse);
+    await performThrow('player');
+    state.phase = 'enemyJudging'; renderControlPanel();
+    await wait(900);
+    const enemyCorrect = Math.random() < 0.6;
+    const enemyAnswer = enemyCorrect ? verse.isReal : !verse.isReal;
+    hideVerseDisplay();
+    if (enemyCorrect) {
+      // 相手が正解で避けても、投げた方が有利：少しダメージ (10)
+      sfx.dodge();
+      applyHit('enemy', false);
+      setTimeout(() => { if (state.enemyHP > 0) setAnim('player','celebrate',1000); }, 500);
+      state.lastResult = { type:'hit', message: `ゴリアテは「${enemyAnswer?'〇':'×'}」と回答！<br>正解だが、かすった！${DAMAGE_NORMAL}ダメージ`, source: verse.isReal ? `📖 ${verse.source}` : `💡 ${verse.hint}` };
+    } else {
+      applyHit('enemy', true);
+      setTimeout(() => { if (state.enemyHP > 0) setAnim('player','celebrate',1000); }, 800);
+      state.lastResult = { crit: true, message: `💥 CRITICAL!!<br>ゴリアテは「${enemyAnswer?'〇':'×'}」と回答！不正解！${DAMAGE_CRITICAL}ダメージ！`, source: verse.isReal ? `📖 ${verse.source}` : `💡 ${verse.hint}` };
+    }
+    const ir = Math.random() < 0.5;
+    const pool = ir ? realVerses : fakeVerses;
+    state.hand[handIndex] = { ...pool[Math.floor(Math.random()*pool.length)], isReal: ir };
+    state.phase = 'result'; renderControlPanel();
+    await wait(3000);
+    if (state.enemyHP <= 0) { await triggerEnd(true); return; }
+    enemyTurn();
+  }
+
+  async function enemyTurn() {
+    showTurnIndicator('ゴリアテのターン');
+    await wait(1400);
+    state.phase = 'enemyThrow'; renderControlPanel();
+    // ゴリアテが意気込み → ダビデが返答
+    showBubble('enemy', pickLine(goliathLines), 1600);
+    await wait(900);
+    showBubble('player', pickLine(davidResponses), 1400);
+    await wait(800);
+    const verse = randomVerse(); state.currentVerse = verse;
+    await wait(300);
+    showVerseDisplay(verse);
+    await performThrow('enemy');
+    state.phase = 'playerJudge'; renderControlPanel();
+    startTimer();
+  }
+
+  function startTimer() {
+    const start = Date.now();
+    timerInterval = setInterval(() => {
+      const remaining = Math.max(0, TURN_TIME - (Date.now()-start));
+      const bar = document.getElementById('timerBar'); if (bar) bar.style.width = (remaining/TURN_TIME*100)+'%';
+      if (remaining <= 0) { clearInterval(timerInterval); timerInterval = null; playerJudge(null); }
+    }, 50);
+  }
+
+  async function playerJudge(answer) {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    if (state.phase !== 'playerJudge') return;
+    const verse = state.currentVerse;
+    hideVerseDisplay();
+    if (answer === null) {
+      applyHit('player', false);
+      setTimeout(() => { if (state.playerHP > 0) setAnim('enemy','celebrate',1000); }, 600);
+      state.lastResult = { type:'hit', message: `⏰ 時間切れ！${DAMAGE_NORMAL}ダメージ`, source: verse.isReal ? `📖 本物: ${verse.source}` : `💡 偽物: ${verse.hint}` };
+    } else if (answer === verse.isReal) {
+      // 正解で避けたら反撃で相手に10ダメージ
+      sfx.dodge();
+      applyHit('enemy', false);
+      setTimeout(() => { if (state.enemyHP > 0) setAnim('player','celebrate',1000); }, 500);
+      state.lastResult = { type:'hit', message: `✨ 正解！避けて反撃！${DAMAGE_NORMAL}ダメージ`, source: verse.isReal ? `📖 本物: ${verse.source}` : `💡 偽物: ${verse.hint}` };
+    } else {
+      applyHit('player', true);
+      setTimeout(() => { if (state.playerHP > 0) setAnim('enemy','celebrate',1000); }, 800);
+      state.lastResult = { crit: true, message: `💥 CRITICAL!!<br>不正解！${DAMAGE_CRITICAL}ダメージ！`, source: verse.isReal ? `📖 本物: ${verse.source}` : `💡 偽物: ${verse.hint}` };
+    }
+    state.phase = 'result'; renderControlPanel();
+    await wait(3000);
+    if (state.playerHP <= 0) { await triggerEnd(false); return; }
+    playerTurnStart();
+  }
+
+  async function triggerEnd(win) {
+    state.phase = 'gameover';
+    const winEl = document.getElementById(win?'playerChar':'enemyChar');
+    const loseEl = document.getElementById(win?'enemyChar':'playerChar');
+    if (winEl) { clearAnim(winEl); winEl.classList.add('victory'); }
+    if (loseEl) { clearAnim(loseEl); loseEl.classList.add('defeated'); }
+    if (win) {
+      state.phase = 'praising'; renderControlPanel();
+      music.playJingle('victory'); showDivineLight();
+      // ラップ賛美歌が長いので、音符を波状に何度も生成
+      spawnMusicNotes(12);
+      setTimeout(() => spawnMusicNotes(12), 4000);
+      setTimeout(() => spawnMusicNotes(12), 8000);
+      setTimeout(() => spawnMusicNotes(12), 12000);
+      // 賛美歌を聴かせる時間を確保 (スキップ可能)
+      await waitForSkipOrTimeout(16000);
+      state.phase = 'gameover';
+    } else {
+      music.playJingle('defeat');
+      await wait(2500);
+    }
+    endGame(win);
+  }
+
+  function endGame(win) { state.phase = 'gameover'; state.win = win; render(); }
+
+  function renderGameOver() {
+    app.innerHTML = `
+      ${soundToggleHTML()}
+      <div class="gameover-screen">
+        <div class="gover-icon">${state.win?'🏆':'💀'}</div>
+        <h2 class="${state.win?'win':'lose'}">${state.win?'勝利！':'敗北...'}</h2>
+        <p class="comment">
+          ${state.win ? 'ダビデは主に賛美を捧げた！<br>「戦いは主のものなり」<br>主の御名によりて、巨人は倒れたり。' : 'ゴリアテの前に敗れた...<br>聖句の学びを深め、再び挑もう。'}
+        </p>
+        <button class="main-btn" onclick="returnToTitle()">もう一度</button>
+      </div>`;
+  }
+
+  function returnToTitle() { state.phase = 'title'; render(); }
+
+  window.startGame = startGame;
+  window.playerThrow = playerThrow;
+  window.playerJudge = playerJudge;
+  window.returnToTitle = returnToTitle;
+
+  music.init();
+  render();
+</script>
+</body>
+</html>
